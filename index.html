@@ -146,8 +146,8 @@
 </div>
 
 <script>
-  // Ensure your URL ends in /exec, NOT /dev
-  const API_URL = "https://script.google.com/macros/s/AKfycbzRr2GVNyEonTVaD6ZemnPityHVHhaImG05xgJbLA8wrDnJQQc8Pp7DOshr_MlFwZJd/exec";
+  // Paste your newly generated /exec URL here:
+  const API_URL = "https://script.google.com/macros/s/AKfycbzgKhOjovpiabJvMB3tpSlYW8wTODGCWeY5Dsp4eDGnvDSKGe2N-SovMlKx-553W3PL/exec";
   let chartInstance = null;
 
   document.getElementById('date').valueAsDate = new Date();
@@ -155,23 +155,17 @@
   async function loadData() {
     const tbody = document.getElementById('table-body');
     try {
-      // Follow Google's redirect automatically
-      const res = await fetch(API_URL, {
-        method: 'GET',
-        redirect: 'follow'
-      });
-      
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const res = await fetch(API_URL);
       const data = await res.json();
       
-      if (!Array.isArray(data)) {
-        throw new Error("Invalid data format received");
+      if (data.error) {
+        throw new Error(data.error);
       }
       
-      updateDashboard(data);
+      updateDashboard(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Failed fetching sheet data:", err);
-      tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Failed to load data. Check console (F12) for details.</td></tr>`;
+      console.error("Fetch error:", err);
+      tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error: ${err.message}. Check browser console (F12).</td></tr>`;
     }
   }
 
@@ -183,7 +177,7 @@
     tbody.innerHTML = '';
 
     if (entries.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No entries found. Add your first transaction above!</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No entries found in sheet.</td></tr>`;
       return;
     }
 
@@ -255,13 +249,10 @@
     };
 
     try {
-      // Use text/plain to prevent CORS preflight blocking
       await fetch(API_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
       
@@ -269,15 +260,11 @@
       document.getElementById('amount').value = '';
       document.getElementById('note').value = '';
       
-      // Allow Google Sheets ~1.5s to write row before refetching
-      setTimeout(() => {
-        loadData();
-      }, 1500);
+      setTimeout(loadData, 1500);
     } catch (err) {
       console.error('Failed saving entry:', err);
-      alert('Error connecting to sheet. Please try again.');
+      alert('Error saving entry.');
     } finally {
-      // Re-enable the submit button regardless of success or failure
       btn.disabled = false;
       btn.innerText = 'Save to Sheet';
     }
