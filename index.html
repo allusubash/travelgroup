@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Travel & Expense Dashboard</title>
-  
-  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --bg: #f4f6f9;
@@ -24,14 +22,14 @@
       margin: 0;
       padding: 20px;
     }
-    .container { max-width: 900px; margin: 0 auto; }
+    .container { max-width: 1000px; margin: 0 auto; }
     h1 { text-align: center; margin-bottom: 20px; }
     
     #debug-box {
       background: #1e293b;
       color: #38bdf8;
       font-family: monospace;
-      padding: 12px 16px;
+      padding: 10px 14px;
       border-radius: 6px;
       margin-bottom: 20px;
       font-size: 13px;
@@ -59,7 +57,7 @@
 
     .main-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1.1fr 0.9fr;
       gap: 20px;
       margin-bottom: 20px;
     }
@@ -80,14 +78,42 @@
       border-radius: 6px;
       font-size: 14px;
     }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
     button {
       background: var(--primary);
       color: white;
       border: none;
       cursor: pointer;
       font-weight: 600;
+      flex: 1;
+    }
+    button.cancel-btn {
+      background: #6b7280;
     }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .edit-btn {
+      background: #e0e7ff;
+      color: var(--primary);
+      border: 1px solid #c7d2fe;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .edit-btn:hover {
+      background: #c7d2fe;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 240px;
+      width: 100%;
+    }
 
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
@@ -99,42 +125,48 @@
 <div class="container">
   <h1>Finance & Travel Tracker</h1>
 
-  <div id="debug-box">Status: Initializing UI...</div>
+  <div id="debug-box">Status: Connecting...</div>
 
   <div class="metrics-grid">
     <div class="metric-card">
       <h3>Total Income</h3>
-      <p id="total-income" class="income-text">$0.00</p>
+      <p id="total-income" class="income-text">₹0.00</p>
     </div>
     <div class="metric-card">
       <h3>Total Expenses</h3>
-      <p id="total-expenses" class="expense-text">$0.00</p>
+      <p id="total-expenses" class="expense-text">₹0.00</p>
     </div>
     <div class="metric-card">
       <h3>Remaining Balance</h3>
-      <p id="total-balance" class="balance-text">$0.00</p>
+      <p id="total-balance" class="balance-text">₹0.00</p>
     </div>
   </div>
 
   <div class="main-grid">
-    <div class="panel">
-      <h2>Add New Entry</h2>
+    <div class="panel" id="form-panel">
+      <h2 id="form-title">Add Entry</h2>
       <form id="finance-form">
+        <input type="hidden" id="edit-row-index" value="" />
+
         <select id="type" required>
           <option value="Expense">Expense (-)</option>
           <option value="Income">Income (+)</option>
         </select>
-        <input type="text" id="category" placeholder="Category (e.g., Food, Flight, Stay)" required />
-        <input type="number" id="amount" placeholder="Amount" step="any" required />
+        <input type="text" id="category" placeholder="Category (e.g., Food, Stay, Travel, Fuel)" required />
+        <input type="number" id="amount" placeholder="Amount (₹)" step="any" required />
         <input type="date" id="date" required />
-        <input type="text" id="note" placeholder="Note / Description" />
-        <button type="submit" id="submit-btn">Save to Sheet</button>
+        <input type="text" id="note" placeholder="Optional Note" />
+        
+        <div class="btn-group">
+          <button type="submit" id="submit-btn">Save to Sheet</button>
+          <button type="button" id="cancel-btn" class="cancel-btn" style="display: none;" onclick="resetForm()">Cancel</button>
+        </div>
       </form>
     </div>
 
     <div class="panel">
-      <h2>Expense Distribution</h2>
-      <div style="position: relative; height: 220px;">
+      <h2>Expense Breakdown</h2>
+      <div class="chart-container">
         <canvas id="expenseChart"></canvas>
       </div>
     </div>
@@ -148,12 +180,13 @@
           <th>Date</th>
           <th>Type</th>
           <th>Category</th>
-          <th>Amount</th>
+          <th>Amount (₹)</th>
           <th>Note</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody id="table-body">
-        <tr><td colspan="5" style="text-align:center; padding: 15px;">Waiting for connection...</td></tr>
+        <tr><td colspan="6" style="text-align:center; padding: 15px;">Loading transactions...</td></tr>
       </tbody>
     </table>
   </div>
@@ -161,10 +194,17 @@
 
 <script>
   // Paste your Apps Script Web App URL below:
-  const API_URL = "https://script.google.com/macros/s/AKfycbwp9gm7MINgF-NtU2pyinGyeMAcJcLUFUWTMI_v_yLOKOCUijFn6LNydpcmctBluDHM/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbwwPxO-LHTO2MrC9HWK9M7mS21T0jxTgjoIWDF9ixR0IopUTj1iuBCG2WlKZGlDEhFM/exec";
   
-  let chartInstance = null;
+  let myChart = null;
+  let allEntries = [];
   const debugBox = document.getElementById('debug-box');
+
+  const inrFormatter = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2
+  });
 
   function logStatus(msg) {
     debugBox.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
@@ -176,8 +216,8 @@
     const tbody = document.getElementById('table-body');
     
     if (!API_URL || API_URL.includes("PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE")) {
-      logStatus("CONFIGURATION ERROR: Please add your Google Apps Script URL in index.html");
-      tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Missing API URL</td></tr>`;
+      logStatus("CONFIGURATION ERROR: Paste your Google Apps Script URL into index.html");
+      tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Missing API URL</td></tr>`;
       return;
     }
 
@@ -199,15 +239,15 @@
 
       if (data.error) throw new Error("Apps Script: " + data.error);
 
-      logStatus(`Loaded ${data.length} records successfully.`);
-      updateDashboard(Array.isArray(data) ? data : []);
+      allEntries = Array.isArray(data) ? data : [];
+      logStatus(`Loaded ${allEntries.length} records successfully.`);
+      updateDashboard(allEntries);
     } catch (err) {
       logStatus("Error: " + err.message);
-      tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center; padding:15px;">Failed to load: ${err.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center; padding:15px;">Failed to load: ${err.message}</td></tr>`;
     }
   }
 
-  // FIX 2: Batch DOM updates to prevent Forced Synchronous Reflows
   function updateDashboard(entries) {
     let income = 0;
     let expense = 0;
@@ -215,15 +255,14 @@
     const tbody = document.getElementById('table-body');
 
     if (entries.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:15px; color:#6b7280;">No entries found in sheet.</td></tr>`;
-      document.getElementById('total-income').textContent = "$0.00";
-      document.getElementById('total-expenses').textContent = "$0.00";
-      document.getElementById('total-balance').textContent = "$0.00";
-      renderChartOptimized({});
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:15px; color:#6b7280;">No entries found in sheet.</td></tr>`;
+      document.getElementById('total-income').textContent = inrFormatter.format(0);
+      document.getElementById('total-expenses').textContent = inrFormatter.format(0);
+      document.getElementById('total-balance').textContent = inrFormatter.format(0);
+      renderChart({});
       return;
     }
 
-    // Step A: Read & Aggregate in memory
     const fragment = document.createDocumentFragment();
     const reversed = entries.slice().reverse();
 
@@ -249,77 +288,118 @@
         <td>${formattedDate}</td>
         <td>${type}</td>
         <td>${item.category || ''}</td>
-        <td style="color: ${isIncome ? 'var(--income)' : 'var(--expense)'}; font-weight: 600;">$${amount.toFixed(2)}</td>
+        <td style="color: ${isIncome ? 'var(--income)' : 'var(--expense)'}; font-weight: 600;">${inrFormatter.format(amount)}</td>
         <td>${item.note || ''}</td>
+        <td>
+          <button class="edit-btn" onclick="editRecord(${item.rowIndex})">Edit</button>
+        </td>
       `;
       fragment.appendChild(tr);
     }
 
-    // Step B: Write to DOM all at once (Zero layout thrashing)
     tbody.replaceChildren(fragment);
-    document.getElementById('total-income').textContent = `$${income.toFixed(2)}`;
-    document.getElementById('total-expenses').textContent = `$${expense.toFixed(2)}`;
-    document.getElementById('total-balance').textContent = `$${(income - expense).toFixed(2)}`;
+    document.getElementById('total-income').textContent = inrFormatter.format(income);
+    document.getElementById('total-expenses').textContent = inrFormatter.format(expense);
+    document.getElementById('total-balance').textContent = inrFormatter.format(income - expense);
 
-    // FIX 3: Push Chart.js work to browser idle time
-    renderChartOptimized(categoryTotals);
+    renderChart(categoryTotals);
   }
 
-  // FIX 3: Lazy off-thread execution of Chart.js
-  function renderChartOptimized(categoryMap) {
-    const render = () => {
-      if (typeof Chart === 'undefined') {
-        // Retry after short pause if script is still downloading deferred
-        setTimeout(() => renderChartOptimized(categoryMap), 100);
-        return;
-      }
+  // Populate form with row details for editing
+  function editRecord(rowIndex) {
+    const record = allEntries.find(item => item.rowIndex === rowIndex);
+    if (!record) return;
 
-      const canvas = document.getElementById('expenseChart');
-      if (!canvas) return;
-      
-      const ctx = canvas.getContext('2d');
-      const labels = Object.keys(categoryMap);
-      const values = Object.values(categoryMap);
+    document.getElementById('edit-row-index').value = record.rowIndex;
+    document.getElementById('type').value = record.type || 'Expense';
+    document.getElementById('category').value = record.category || '';
+    
+    const rawAmount = String(record.amount || '0').replace(/[^0-9.-]+/g, "");
+    document.getElementById('amount').value = rawAmount;
+    
+    if (record.date) {
+      document.getElementById('date').value = String(record.date).split('T')[0];
+    }
+    document.getElementById('note').value = record.note || '';
 
-      if (chartInstance) {
-        chartInstance.destroy();
-      }
+    // Switch form UI to Edit Mode
+    document.getElementById('form-title').textContent = "Edit Entry (Row " + record.rowIndex + ")";
+    document.getElementById('submit-btn').textContent = "Update Record";
+    document.getElementById('cancel-btn').style.display = "inline-block";
 
-      chartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: labels.length > 0 ? labels : ['No Expenses'],
-          datasets: [{
-            data: values.length > 0 ? values : [1],
-            backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#8b5cf6']
-          }]
-        },
-        options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          animation: { duration: 400 }, // Shorter animation reduces CPU fit calculations
-          plugins: {
-            legend: { position: 'bottom' }
+    // Smooth scroll to form
+    document.getElementById('form-panel').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Reset form back to "Add" mode
+  function resetForm() {
+    document.getElementById('edit-row-index').value = "";
+    document.getElementById('finance-form').reset();
+    document.getElementById('date').valueAsDate = new Date();
+    document.getElementById('form-title').textContent = "Add Entry";
+    document.getElementById('submit-btn').textContent = "Save to Sheet";
+    document.getElementById('cancel-btn').style.display = "none";
+  }
+
+  function renderChart(categoryMap) {
+    const canvas = document.getElementById('expenseChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const ctx = canvas.getContext('2d');
+    const labels = Object.keys(categoryMap);
+    const values = Object.values(categoryMap);
+
+    if (myChart) {
+      myChart.destroy();
+    }
+
+    myChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels.length > 0 ? labels : ['No Expenses'],
+        datasets: [{
+          data: values.length > 0 ? values : [1],
+          backgroundColor: [
+            '#ef4444', '#f97316', '#f59e0b', '#10b981', 
+            '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'
+          ]
+        }]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 12, padding: 12 }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.label || '';
+                let val = context.raw || 0;
+                return ` ${label}: ${inrFormatter.format(val)}`;
+              }
+            }
           }
         }
-      });
-    };
-
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(render);
-    } else {
-      requestAnimationFrame(render);
-    }
+      }
+    });
   }
 
   document.getElementById('finance-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('submit-btn');
+    const editRowIndex = document.getElementById('edit-row-index').value;
+    const isEditing = Boolean(editRowIndex);
+
     btn.disabled = true;
-    btn.innerText = 'Saving...';
-    logStatus("Saving entry to Google Sheet...");
+    btn.innerText = isEditing ? 'Updating...' : 'Saving...';
+    logStatus(isEditing ? `Updating row ${editRowIndex} in sheet...` : "Saving new entry...");
 
     const payload = {
+      action: isEditing ? 'update' : 'create',
+      rowIndex: editRowIndex || null,
       type: document.getElementById('type').value,
       category: document.getElementById('category').value,
       amount: document.getElementById('amount').value,
@@ -335,10 +415,8 @@
         body: JSON.stringify(payload)
       });
       
-      logStatus("Saved successfully! Refreshing records...");
-      document.getElementById('category').value = '';
-      document.getElementById('amount').value = '';
-      document.getElementById('note').value = '';
+      logStatus(isEditing ? "Updated successfully! Refreshing..." : "Saved successfully! Refreshing...");
+      resetForm();
       
       setTimeout(loadData, 1500);
     } catch (err) {
@@ -346,12 +424,11 @@
       alert('Error saving record: ' + err.message);
     } finally {
       btn.disabled = false;
-      btn.innerText = 'Save to Sheet';
+      btn.innerText = isEditing ? 'Update Record' : 'Save to Sheet';
     }
   });
 
-  // Run on DOM ready
-  document.addEventListener('DOMContentLoaded', loadData);
+  loadData();
 </script>
 </body>
 </html>
