@@ -1,296 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free Weekend Convoy & Long Drive Group</title>
-    <style>
-        /* Modern Reset & Base Styles */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance Tracker Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --income: #16a34a;
+      --expense: #dc2626;
+      --text: #1f2937;
+      --border: #e5e7eb;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 24px;
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h1 { margin-bottom: 24px; text-align: center; }
+    
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .metric-card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .metric-card h3 { margin: 0 0 8px 0; font-size: 14px; color: #6b7280; text-transform: uppercase; }
+    .metric-card p { margin: 0; font-size: 24px; font-weight: bold; }
+    .income-text { color: var(--income); }
+    .expense-text { color: var(--expense); }
+    .balance-text { color: var(--primary); }
 
-        body {
-            background-color: #f8f9fa;
-            color: #333333;
-            line-height: 1.6;
-        }
+    /* Layout Sections */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    @media(max-width: 768px) { .main-grid { grid-template-columns: 1fr; } }
+    
+    .panel {
+      background: var(--card);
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .panel h2 { margin-top: 0; font-size: 18px; margin-bottom: 16px; }
 
-        /* Hero Banner Section */
-        .hero {
-            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
-                        url('https://unsplash.com') no-repeat center center/cover;
-            height: 60vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            color: #ffffff;
-            padding: 20px;
-        }
+    /* Form Styles */
+    form { display: flex; flex-direction: column; gap: 12px; }
+    input, select, button {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { opacity: 0.9; }
 
-        .hero h1 {
-            font-size: 2.8rem;
-            margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-
-        .hero p {
-            font-size: 1.2rem;
-            max-width: 600px;
-            margin-bottom: 25px;
-            font-weight: 300;
-        }
-
-        .btn-primary {
-            display: inline-block;
-            background-color: #ff4757;
-            color: white;
-            padding: 12px 30px;
-            text-decoration: none;
-            font-weight: bold;
-            border-radius: 30px;
-            transition: background 0.3s ease, transform 0.2s;
-            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
-        }
-
-        .btn-primary:hover {
-            background-color: #ff6b81;
-            transform: translateY(-2px);
-        }
-
-        /* Container & Section Layouts */
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 50px 20px;
-        }
-
-        section {
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        h2 {
-            color: #2f3542;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #ff4757;
-            padding-bottom: 10px;
-            display: inline-block;
-        }
-
-        /* Route & Itinerary Details */
-        .route-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-        }
-
-        @media (max-width: 768px) {
-            .route-grid {
-                grid-template-columns: 1fr;
-            }
-            .hero h1 { font-size: 2rem; }
-        }
-
-        .map-box iframe {
-            width: 100%;
-            height: 300px;
-            border: 0;
-            border-radius: 8px;
-        }
-
-        .timeline {
-            list-style: none;
-            position: relative;
-            padding-left: 20px;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #ced4da;
-        }
-
-        .timeline-item {
-            position: relative;
-            margin-bottom: 20px;
-        }
-
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: -24px;
-            top: 5px;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #ff4757;
-        }
-
-        .time {
-            font-weight: bold;
-            color: #ff4757;
-        }
-
-        /* Rules Cards */
-        .rules-list {
-            list-style-type: none;
-        }
-
-        .rules-list li {
-            position: relative;
-            padding-left: 30px;
-            margin-bottom: 15px;
-            font-size: 1.05rem;
-        }
-
-        .rules-list li::before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: #2ed573;
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-
-        /* Free Disclaimer Notice */
-        .disclaimer-box {
-            background-color: #e8f5e9;
-            border-left: 5px solid #2ed573;
-            padding: 15px;
-            border-radius: 4px;
-            margin-top: 15px;
-            font-weight: 500;
-        }
-
-        /* Call To Action Box */
-        .cta-section {
-            text-align: center;
-            background: linear-gradient(135deg, #2f3542, #57606f);
-            color: white;
-        }
-
-        .cta-section h2 {
-            color: white;
-            border-bottom: 3px solid #ffffff;
-        }
-
-        .cta-section p {
-            margin-bottom: 25px;
-            opacity: 0.9;
-        }
-
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 20px;
-            color: #a4b0be;
-            font-size: 0.9rem;
-        }
-    </style>
+    /* Table Styles */
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    th { color: #6b7280; }
+  </style>
 </head>
 <body>
 
-    <!-- Hero Banner -->
-    <header class="hero">
-        <h1>Join Our Next Free Weekend Convoy</h1>
-        <p>No hidden club charges. No commercial fees. Just passionate road trippers mapping out open highways together.</p>
-        <a href="#register" class="btn-primary">Register For The Drive</a>
-    </header>
+<div class="container">
+  <h1>Personal Finance Dashboard</h1>
 
-    <div class="container">
-        
-        <!-- Section: Trip Route & Schedule -->
-        <section id="itinerary">
-            <h2>Route & Itinerary</h2>
-            <div class="route-grid">
-                <div>
-                    <h3>Timeline Schedule</h3>
-                    <br>
-                    <ul class="timeline">
-                        <li class="timeline-item">
-                            <span class="time">05:30 AM</span> - Assemble at the designated highway starting point.
-                        </li>
-                        <li class="timeline-item">
-                            <span class="time">06:00 AM</span> - Strict departure flag-off. Late arrivals must catch up safely.
-                        </li>
-                        <li class="timeline-item">
-                            <span class="time">07:30 AM</span> - Breakfast break at a popular mid-way highway diner.
-                        </li>
-                        <li class="timeline-item">
-                            <span class="time">11:00 AM</span> - Group arrival at the scenic viewpoint destination.
-                        </li>
-                    </ul>
-                </div>
-                <div class="map-box">
-                    <h3>Route Map Preview</h3>
-                    <br>
-                    <!-- Google Maps Embed Placeholder. Replace the src link below with a custom route map link if desired -->
-                    <iframe src="https://google.com" allowfullscreen="" loading="lazy"></iframe>
-                </div>
-            </div>
-        </section>
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <h3>Total Income</h3>
+      <p id="total-income" class="income-text">$0.00</p>
+    </div>
+    <div class="metric-card">
+      <h3>Total Expenses</h3>
+      <p id="total-expenses" class="expense-text">$0.00</p>
+    </div>
+    <div class="metric-card">
+      <h3>Remaining Balance</h3>
+      <p id="total-balance" class="balance-text">$0.00</p>
+    </div>
+  </div>
 
-        <!-- Section: Group Guidelines -->
-        <section id="rules">
-            <h2>Group Guidelines & Safety Rules</h2>
-            <ul class="rules-list">
-                <li><strong>No Dangerous Driving:</strong> Rash maneuvers, inner-group overtaking, and street-racing are strictly prohibited.</li>
-                <li><strong>Cost Transparency:</strong> Individual participants take care of their own fuel charges, fastag/tolls, and restaurant food items.</li>
-                <li><strong>Vehicle Fitness:</strong> Check your engine oil, coolant levels, tyre pressure, and confirm you carry a working spare wheel before arriving.</li>
-                <li><strong>Active Checklist:</strong> Valid personal identity cards, vehicle registration documents, active third-party insurance, and PUC certs are mandatory.</li>
-            </ul>
-            <div class="disclaimer-box">
-                💡 100% Free: There is zero cost to register or participate with our collective group convoy network.
-            </div>
-        </section>
-
-        <!-- Section: Call To Action Registration -->
-        <section id="register" class="cta-section">
-            <h2>Secure Your Spot</h2>
-            <p>Ready to hit the open highway? Fill out the brief security clearance registry form so our lead coordinators can safely catalog the total convoy vehicle numbers.</p>
-            
-            <!-- GOOGLE FORMS LINK: Replace the href attribute below with your real Google Form Link -->
-            <a href="https://google.com" target="_blank" class="btn-primary" id="form-link">Open Registration Form</a>
-        </section>
-
+  <div class="main-grid">
+    <div class="panel">
+      <h2>Add Entry</h2>
+      <form id="finance-form">
+        <select id="type" required>
+          <option value="Income">Income (+)</option>
+          <option value="Expense">Expense (-)</option>
+        </select>
+        <input type="text" id="category" placeholder="Category (e.g., Salary, Rent, Food)" required />
+        <input type="number" id="amount" placeholder="Amount" step="0.01" required />
+        <input type="date" id="date" required />
+        <input type="text" id="note" placeholder="Optional Note" />
+        <button type="submit" id="submit-btn">Save to Sheet</button>
+      </form>
     </div>
 
-    <footer>
-        <p>&copy; Free Enthusiasts Convoy Group Network. Organized by drivers, for drivers.</p>
-    </footer>
+    <div class="panel">
+      <h2>Expenses by Category</h2>
+      <canvas id="expenseChart" height="200"></canvas>
+    </div>
+  </div>
 
-    <!-- JavaScript Interactivity Feature -->
-    <script>
-        // Smooth Scrolling logic for navigation buttons
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
+  <div class="panel">
+    <h2>Recent Transactions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Category</th>
+          <th>Amount</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr><td colspan="5">Loading data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
-        // Optional Form Fallback Validation Check 
-        const formButton = document.getElementById('form-link');
-        formButton.addEventListener('click', function(e) {
-            if(formButton.getAttribute('href') === 'https://google.com') {
-                console.log("Admin Reminder: Replace the placeholder link with your customized Google Form URL.");
-            }
-        });
-    </script>
+<script>
+  const API_URL = "https://script.google.com/macros/s/AKfycbyttgQSvnPkQxWCw4DFZ0SHgmvbjppLdJkZiJjTUetbFSWVheaoUleLlEP7Ojy4Et0k/exec";
+  let chartInstance = null;
+
+  document.getElementById('date').valueAsDate = new Date();
+
+  // Load Initial Data
+  async function loadData() {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      updateDashboard(data);
+    } catch (err) {
+      console.error("Failed fetching sheet data", err);
+    }
+  }
+
+  // Update Summary Metrics, Table, and Chart
+  function updateDashboard(entries) {
+    let income = 0;
+    let expense = 0;
+    const categoryTotals = {};
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+
+    entries.forEach(item => {
+      const amount = Number(item.amount) || 0;
+      if (item.type && item.type.toLowerCase() === 'income') {
+        income += amount;
+      } else {
+        expense += amount;
+        const cat = item.category || 'Other';
+        categoryTotals[cat] = (categoryTotals[cat] || 0) + amount;
+      }
+
+      // Add to table
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${item.date ? String(item.date).substring(0,10) : ''}</td>
+        <td>${item.type}</td>
+        <td>${item.category}</td>
+        <td style="color: ${item.type === 'Income' ? 'var(--income)' : 'var(--expense)'}">$${amount.toFixed(2)}</td>
+        <td>${item.note || ''}</td>
+      `;
+      tbody.prepend(row); // Show latest first
+    });
+
+    // Update Cards
+    document.getElementById('total-income').innerText = `$${income.toFixed(2)}`;
+    document.getElementById('total-expenses').innerText = `$${expense.toFixed(2)}`;
+    document.getElementById('total-balance').innerText = `$${(income - expense).toFixed(2)}`;
+
+    renderChart(categoryTotals);
+  }
+
+  // Render Category Breakdown
+  function renderChart(categoryMap) {
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    const labels = Object.keys(categoryMap);
+    const values = Object.values(categoryMap);
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels.length ? labels : ['No Data'],
+        datasets: [{
+          data: values.length ? values : [1],
+          backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#6366f1', '#ec4899']
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  // Submit Handler
+  document.getElementById('finance-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerText = 'Saving...';
+
+    const payload = {
+      type: document.getElementById('type').value,
+      category: document.getElementById('category').value,
+      amount: document.getElementById('amount').value,
+      date: document.getElementById('date').value,
+      note: document.getElementById('note').value
+    };
+
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors', // standard bypass for Apps Script redirect handling
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      // Clear inputs & reload
+      document.getElementById('category').value = '';
+      document.getElementById('amount').value = '';
+      document.getElementById('note').value = '';
+      
+      setTimeout(loadData, 1200); // Small delay to let Apps Script append
+    } catch (err) {
+      alert('Failed to save entry');
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Save to Sheet';
+    }
+  });
+
+  loadData();
+</script>
 </body>
 </html>
