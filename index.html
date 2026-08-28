@@ -146,8 +146,8 @@
 </div>
 
 <script>
-  // Paste your newly generated /exec URL here:
-  const API_URL = "https://script.google.com/macros/s/AKfycbzgKhOjovpiabJvMB3tpSlYW8wTODGCWeY5Dsp4eDGnvDSKGe2N-SovMlKx-553W3PL/exec";
+  // Paste your Apps Script /exec URL below
+  const API_URL = "https://script.google.com/macros/s/AKfycbxKijrREsvhHscOI9lfAYmIdOGhtxvUq_dvuStKMysHX6GyBy8FQsjARiZJWhOcOgyW/exec";
   let chartInstance = null;
 
   document.getElementById('date').valueAsDate = new Date();
@@ -155,17 +155,24 @@
   async function loadData() {
     const tbody = document.getElementById('table-body');
     try {
-      const res = await fetch(API_URL);
+      // Append cache-busting timestamp to prevent stale responses
+      const res = await fetch(`${API_URL}?t=${new Date().getTime()}`, {
+        method: 'GET',
+        redirect: 'follow'
+      });
+      
       const data = await res.json();
       
-      if (data.error) {
+      if (data && data.error) {
         throw new Error(data.error);
       }
       
       updateDashboard(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Fetch error:", err);
-      tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error: ${err.message}. Check browser console (F12).</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="color:#dc2626; text-align:center; padding:16px;">
+        Failed to load: ${err.message}. Open Developer Tools (F12) > Console to inspect the network response.
+      </td></tr>`;
     }
   }
 
@@ -176,13 +183,15 @@
     const tbody = document.getElementById('table-body');
     tbody.innerHTML = '';
 
-    if (entries.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No entries found in sheet.</td></tr>`;
+    if (!entries || entries.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:16px; color:#6b7280;">No entries found in sheet.</td></tr>`;
       return;
     }
 
     entries.forEach(item => {
-      const amount = Number(item.amount) || 0;
+      // Extract properties safely
+      const rawAmount = String(item.amount || '0').replace(/[^0-9.-]+/g, "");
+      const amount = parseFloat(rawAmount) || 0;
       const type = String(item.type || '').trim();
       const isIncome = type.toLowerCase() === 'income';
 
@@ -204,7 +213,7 @@
         <td style="color: ${isIncome ? 'var(--income)' : 'var(--expense)'}">$${amount.toFixed(2)}</td>
         <td>${item.note || ''}</td>
       `;
-      tbody.prepend(row);
+      tbody.prepend(row); // Latest on top
     });
 
     document.getElementById('total-income').innerText = `$${income.toFixed(2)}`;
@@ -263,7 +272,7 @@
       setTimeout(loadData, 1500);
     } catch (err) {
       console.error('Failed saving entry:', err);
-      alert('Error saving entry.');
+      alert('Error saving entry to sheet.');
     } finally {
       btn.disabled = false;
       btn.innerText = 'Save to Sheet';
