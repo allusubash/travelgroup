@@ -146,23 +146,35 @@
 </div>
 
 <script>
+  // Ensure your URL ends in /exec, NOT /dev
   const API_URL = "https://script.google.com/macros/s/AKfycbzRr2GVNyEonTVaD6ZemnPityHVHhaImG05xgJbLA8wrDnJQQc8Pp7DOshr_MlFwZJd/exec";
   let chartInstance = null;
 
   document.getElementById('date').valueAsDate = new Date();
 
-  // Load Initial Data
   async function loadData() {
+    const tbody = document.getElementById('table-body');
     try {
-      const res = await fetch(API_URL);
+      // Follow Google's redirect automatically
+      const res = await fetch(API_URL, {
+        method: 'GET',
+        redirect: 'follow'
+      });
+      
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
+      
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid data format received");
+      }
+      
       updateDashboard(data);
     } catch (err) {
-      console.error("Failed fetching sheet data", err);
+      console.error("Failed fetching sheet data:", err);
+      tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Failed to load data. Check console (F12) for details.</td></tr>`;
     }
   }
 
-  // Update Summary Metrics, Table, and Chart
   function updateDashboard(entries) {
     let income = 0;
     let expense = 0;
@@ -170,9 +182,17 @@
     const tbody = document.getElementById('table-body');
     tbody.innerHTML = '';
 
+    if (entries.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No entries found. Add your first transaction above!</td></tr>`;
+      return;
+    }
+
     entries.forEach(item => {
       const amount = Number(item.amount) || 0;
-      if (item.type && item.type.toLowerCase() === 'income') {
+      const type = String(item.type || '').trim();
+      const isIncome = type.toLowerCase() === 'income';
+
+      if (isIncome) {
         income += amount;
       } else {
         expense += amount;
@@ -180,19 +200,19 @@
         categoryTotals[cat] = (categoryTotals[cat] || 0) + amount;
       }
 
-      // Add to table
+      const formattedDate = item.date ? String(item.date).split('T')[0] : '';
+
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${item.date ? String(item.date).substring(0,10) : ''}</td>
-        <td>${item.type}</td>
-        <td>${item.category}</td>
-        <td style="color: ${item.type === 'Income' ? 'var(--income)' : 'var(--expense)'}">$${amount.toFixed(2)}</td>
+        <td>${formattedDate}</td>
+        <td>${type}</td>
+        <td>${item.category || ''}</td>
+        <td style="color: ${isIncome ? 'var(--income)' : 'var(--expense)'}">$${amount.toFixed(2)}</td>
         <td>${item.note || ''}</td>
       `;
-      tbody.prepend(row); // Show latest first
+      tbody.prepend(row);
     });
 
-    // Update Cards
     document.getElementById('total-income').innerText = `$${income.toFixed(2)}`;
     document.getElementById('total-expenses').innerText = `$${expense.toFixed(2)}`;
     document.getElementById('total-balance').innerText = `$${(income - expense).toFixed(2)}`;
@@ -200,7 +220,6 @@
     renderChart(categoryTotals);
   }
 
-  // Render Category Breakdown
   function renderChart(categoryMap) {
     const ctx = document.getElementById('expenseChart').getContext('2d');
     const labels = Object.keys(categoryMap);
@@ -211,7 +230,7 @@
     chartInstance = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: labels.length ? labels : ['No Data'],
+        labels: labels.length ? labels : ['No Expenses'],
         datasets: [{
           data: values.length ? values : [1],
           backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#6366f1', '#ec4899']
@@ -221,7 +240,6 @@
     });
   }
 
-  // Submit Handler
   document.getElementById('finance-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('submit-btn');
@@ -237,22 +255,29 @@
     };
 
     try {
+      // Use text/plain to prevent CORS preflight blocking
       await fetch(API_URL, {
         method: 'POST',
-        mode: 'no-cors', // standard bypass for Apps Script redirect handling
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
         body: JSON.stringify(payload)
       });
       
-      // Clear inputs & reload
       document.getElementById('category').value = '';
       document.getElementById('amount').value = '';
       document.getElementById('note').value = '';
       
-      setTimeout(loadData, 1200); // Small delay to let Apps Script append
+      // Allow Google Sheets ~1.5s to write row before refetching
+      setTimeout(() => {
+        loadData();
+      }, 1500);
     } catch (err) {
-      alert('Failed to save entry');
+      console.error('Failed saving entry:', err);
+      alert('Error connecting to sheet. Please try again.');
     } finally {
+      // Re-enable the submit button regardless of success or failure
       btn.disabled = false;
       btn.innerText = 'Save to Sheet';
     }
